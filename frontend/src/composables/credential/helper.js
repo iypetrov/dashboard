@@ -11,7 +11,6 @@ import dnsProviders from '@/data/vendors/dns'
 import get from 'lodash/get'
 
 const cloudProviderConfigs = [...infraProviders, ...dnsProviders]
-const cloudProviderConfigByName = new Map(cloudProviderConfigs.map(provider => [provider.name, provider]))
 
 function decodeSecretValue (secretData, key) {
   const keys = Array.isArray(key) ? key : [key]
@@ -31,7 +30,12 @@ function getGCPProjectId (secretData) {
   if (!serviceAccount) {
     return undefined
   }
-  return get(JSON.parse(decodeBase64(serviceAccount)), ['project_id'])
+
+  try {
+    return get(JSON.parse(decodeBase64(serviceAccount)), ['project_id'])
+  } catch {
+    return undefined
+  }
 }
 
 function getGCPDNSProject (secretData) {
@@ -172,18 +176,14 @@ export function isInfrastructureBinding ({ binding, infraProviderTypes }) {
 
 // Secret Details
 export function secretDetails ({ secret, providerType }) {
-  const secretData = secret.data || {}
-  try {
-    const providerConfig = cloudProviderConfigByName.get(providerType)
-    if (!providerConfig) {
-      return undefined
-    }
-
-    return resolveSecretDetailsFromVendorConfig({
-      secretData,
-      providerConfig,
-    })
-  } catch (err) {
+  const secretData = secret?.data || {}
+  const providerConfig = cloudProviderConfigs.find(provider => provider.name === providerType)
+  if (!providerConfig) {
     return undefined
   }
+
+  return resolveSecretDetailsFromVendorConfig({
+    secretData,
+    providerConfig,
+  })
 }
