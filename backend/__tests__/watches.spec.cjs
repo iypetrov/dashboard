@@ -100,6 +100,7 @@ const io = {
 describe('watches', function () {
   const foobar = { metadata: { namespace: 'foo', name: 'bar', uid: 4 } }
   const foobaz = { metadata: { namespace: 'foo', name: 'baz', uid: 5 } }
+  const gardenManagedSeedShoot = { metadata: { namespace: 'garden', name: 'managed-seed-foo', uid: 6 } }
 
   let informer
 
@@ -126,6 +127,7 @@ describe('watches', function () {
 
     beforeEach(() => {
       shootsWithIssues = new Set()
+      jest.spyOn(cache, 'getManagedSeedForShootInGardenNamespace').mockReturnValue(undefined)
     })
 
     it('should watch shoots without issues', async function () {
@@ -204,6 +206,32 @@ describe('watches', function () {
           'shoots',
           { type: 'DELETED', uid: foobazUnhealthy.metadata.uid },
         ],
+      ])
+    })
+
+    it('should emit managed seed shoots to a dedicated garden room', async function () {
+      cache.getManagedSeedForShootInGardenNamespace.mockReturnValue({
+        metadata: {
+          namespace: 'garden',
+          name: 'managed-seed-foo',
+          uid: 7,
+        },
+      })
+
+      watches.shoots(io, informer)
+
+      informer.emit('add', gardenManagedSeedShoot)
+      informer.emit('update', gardenManagedSeedShoot)
+      informer.emit('delete', gardenManagedSeedShoot)
+
+      await flushPromises()
+
+      const room = rooms.get('managedseed-shoots;garden')
+      expect(room.emit).toHaveBeenCalledTimes(3)
+      expect(room.emit.mock.calls).toEqual([
+        ['managedseed-shoots', { type: 'ADDED', uid: gardenManagedSeedShoot.metadata.uid }],
+        ['managedseed-shoots', { type: 'MODIFIED', uid: gardenManagedSeedShoot.metadata.uid }],
+        ['managedseed-shoots', { type: 'DELETED', uid: gardenManagedSeedShoot.metadata.uid }],
       ])
     })
   })
@@ -293,6 +321,61 @@ describe('watches', function () {
         ['seeds', { type: 'MODIFIED', uid }],
         ['seeds', { type: 'DELETED', uid }],
       ])
+    })
+  })
+
+  describe('managedseeds', function () {
+    it('should watch managedseeds in the garden room', async function () {
+      watches.managedseeds(io, informer)
+
+      const uid = 8
+      const managedSeed = {
+        metadata: {
+          namespace: 'garden',
+          name: 'seed-foo',
+          uid,
+        },
+      }
+
+      informer.emit('add', managedSeed)
+      informer.emit('update', managedSeed)
+      informer.emit('delete', managedSeed)
+
+      await flushPromises()
+
+      const ids = ['managedseeds;garden']
+
+      expect(Array.from(rooms.keys())).toEqual(ids)
+      expect(nsp.to).toHaveBeenCalledTimes(3)
+
+      const managedSeedsRoom = rooms.get(ids[0])
+      expect(managedSeedsRoom.emit).toHaveBeenCalledTimes(3)
+      expect(managedSeedsRoom.emit.mock.calls).toEqual([
+        ['managedseeds', { type: 'ADDED', uid }],
+        ['managedseeds', { type: 'MODIFIED', uid }],
+        ['managedseeds', { type: 'DELETED', uid }],
+      ])
+    })
+
+    it('should ignore managedseeds outside the garden namespace', async function () {
+      watches.managedseeds(io, informer)
+
+      const managedSeed = {
+        metadata: {
+          namespace: 'foo',
+          name: 'seed-foo',
+          uid: 8,
+        },
+      }
+
+      informer.emit('add', managedSeed)
+      informer.emit('update', managedSeed)
+      informer.emit('delete', managedSeed)
+
+      await flushPromises()
+
+      expect(nsp.to).not.toHaveBeenCalled()
+      expect(Array.from(rooms.keys())).toEqual([])
     })
   })
 

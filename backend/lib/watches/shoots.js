@@ -5,6 +5,7 @@
 //
 
 import { shootHasIssue } from '../utils/index.js'
+import cache from '../cache/index.js'
 
 export default (io, informer, options) => {
   const nsp = io.of('/')
@@ -45,9 +46,23 @@ export default (io, informer, options) => {
     nsp.to(rooms).emit('shoots', { type, uid })
   }
 
+  const publishManagedSeedShoots = event => {
+    const { type, object } = event
+    const { namespace, name, uid } = object.metadata
+    if (namespace !== 'garden') {
+      return
+    }
+    const managedSeed = cache.getManagedSeedForShootInGardenNamespace(name)
+    if (!managedSeed) {
+      return
+    }
+    nsp.to('managedseed-shoots;garden').emit('managedseed-shoots', { type, uid })
+  }
+
   const handleEvent = event => {
     publishShoots(event)
     publishUnhealthyShoots(event)
+    publishManagedSeedShoots(event)
   }
 
   informer.on('add', object => handleEvent({ type: 'ADDED', object }))
