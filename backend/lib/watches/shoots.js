@@ -52,10 +52,16 @@ export default (io, informer, options) => {
     if (namespace !== 'garden') {
       return
     }
-    const managedSeed = cache.getManagedSeedForShootInGardenNamespace(name)
-    if (!managedSeed) {
-      return
+    if (type !== 'DELETED') {
+      const managedSeed = cache.getManagedSeedForShootInGardenNamespace(name)
+      if (!managedSeed) {
+        return
+      }
     }
+    // Always emit DELETED events without consulting the managedSeed cache:
+    // the ManagedSeed may already be gone when the shoot delete arrives.
+    // This is safe because the managedSeed shoot reference is immutable and
+    // deleting an unknown UID is a no-op for the frontend
     nsp.to('managedseed-shoots;garden').emit('managedseed-shoots', { type, uid })
   }
 

@@ -234,6 +234,22 @@ describe('watches', function () {
         ['managedseed-shoots', { type: 'DELETED', uid: gardenManagedSeedShoot.metadata.uid }],
       ])
     })
+
+    it('should emit deleted garden shoots even if the managed seed is already gone from cache', async function () {
+      watches.shoots(io, informer)
+
+      informer.emit('delete', gardenManagedSeedShoot)
+
+      await flushPromises()
+
+      expect(cache.getManagedSeedForShootInGardenNamespace).not.toHaveBeenCalled()
+
+      const room = rooms.get('managedseed-shoots;garden')
+      expect(room.emit).toHaveBeenCalledTimes(1)
+      expect(room.emit.mock.calls).toEqual([
+        ['managedseed-shoots', { type: 'DELETED', uid: gardenManagedSeedShoot.metadata.uid }],
+      ])
+    })
   })
 
   describe('projects', function () {
