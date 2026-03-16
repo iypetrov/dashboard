@@ -341,6 +341,10 @@ describe('watches', function () {
   })
 
   describe('managedseeds', function () {
+    beforeEach(() => {
+      jest.spyOn(cache, 'getShoot').mockReturnValue(undefined)
+    })
+
     it('should watch managedseeds in the garden room', async function () {
       watches.managedseeds(io, informer)
 
@@ -371,6 +375,46 @@ describe('watches', function () {
         ['managedseeds', { type: 'MODIFIED', uid }],
         ['managedseeds', { type: 'DELETED', uid }],
       ])
+
+      expect(cache.getShoot).not.toHaveBeenCalled()
+    })
+
+    it('should backfill managed seed shoots on managedseed add', async function () {
+      cache.getShoot.mockReturnValue(gardenManagedSeedShoot)
+
+      watches.managedseeds(io, informer)
+
+      const uid = 8
+      const managedSeed = {
+        metadata: {
+          namespace: 'garden',
+          name: 'seed-foo',
+          uid,
+        },
+        spec: {
+          shoot: {
+            name: gardenManagedSeedShoot.metadata.name,
+          },
+        },
+      }
+
+      informer.emit('add', managedSeed)
+
+      await flushPromises()
+
+      expect(cache.getShoot).toHaveBeenCalledTimes(1)
+      expect(cache.getShoot).toHaveBeenCalledWith('garden', gardenManagedSeedShoot.metadata.name)
+
+      const managedSeedsRoom = rooms.get('managedseeds;garden')
+      expect(managedSeedsRoom.emit).toHaveBeenCalledTimes(1)
+      expect(managedSeedsRoom.emit).toHaveBeenCalledWith('managedseeds', { type: 'ADDED', uid })
+
+      const managedSeedShootsRoom = rooms.get('managedseed-shoots;garden')
+      expect(managedSeedShootsRoom.emit).toHaveBeenCalledTimes(1)
+      expect(managedSeedShootsRoom.emit).toHaveBeenCalledWith('managedseed-shoots', {
+        type: 'ADDED',
+        uid: gardenManagedSeedShoot.metadata.uid,
+      })
     })
 
     it('should ignore managedseeds outside the garden namespace', async function () {
@@ -392,6 +436,7 @@ describe('watches', function () {
 
       expect(nsp.to).not.toHaveBeenCalled()
       expect(Array.from(rooms.keys())).toEqual([])
+      expect(cache.getShoot).not.toHaveBeenCalled()
     })
   })
 
