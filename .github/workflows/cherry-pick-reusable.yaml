@@ -26,7 +26,7 @@ jobs:
       branches: ${{ steps.parse.outputs.branches }}
       has-branches: ${{ steps.parse.outputs.has-branches }}
     steps:
-      - uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2.2.1
+      - uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2.2.2
         id: token
         with:
           app-id: ${{ vars.GARDENER_GITHUB_ACTIONS_APP_ID }}
@@ -53,7 +53,7 @@ jobs:
         target-branch: ${{ fromJson(needs.parse-branches.outputs.branches) }}
       fail-fast: false
     steps:
-      - uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2.2.1
+      - uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2.2.2
         id: token
         with:
           app-id: ${{ vars.GARDENER_GITHUB_ACTIONS_APP_ID }}
@@ -77,7 +77,7 @@ jobs:
     needs: [parse-branches, cherry-pick]
     if: always() && needs.parse-branches.outputs.has-branches == 'true'
     steps:
-      - uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2.2.1
+      - uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2.2.2
         id: token
         with:
           app-id: ${{ vars.GARDENER_GITHUB_ACTIONS_APP_ID }}
