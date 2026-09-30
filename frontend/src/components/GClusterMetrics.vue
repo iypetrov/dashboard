@@ -24,6 +24,13 @@ SPDX-License-Identifier: Apache-2.0
         :url="seedPlutonoUrl"
         :url-text="seedPlutonoUrl"
       />
+      <g-link-list-tile
+        v-if="canViewLandscape"
+        icon="mdi-developer-board"
+        app-title="Seed VictoriaLogs"
+        :url="seedVictoriaLogsUrl"
+        :url-text="seedVictoriaLogsUrl"
+      />
       <template v-if="!isTestingCluster">
         <g-link-list-tile
           :icon="plutonoIcon"
@@ -95,6 +102,7 @@ import { useShootAdvertisedAddresses } from '@/composables/useShootAdvertisedAdd
 
 import {
   getSeedPlutonoUrl,
+  getVictoriaLogsUrl,
   isTruthyValue,
 } from '@/utils'
 
@@ -190,6 +198,9 @@ export default {
     },
     seedPlutonoUrl () {
       return getSeedPlutonoUrl(this.seedIngressDomain)
+    },
+    seedVictoriaLogsUrl () {
+      return getVictoriaLogsUrl(this.seedIngressDomain)
     },
     username () {
       return get(this.shootInfo, ['monitoringUsername'], '')
